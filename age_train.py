@@ -37,13 +37,12 @@ def train(args):
     imdbPlace = imdbMat['imdb'][0][0]
     place = imdbPlace
     # Todo remove redundant variable
-    #place = imdbMat['imdb'][0][0]
+    # place = imdbMat['imdb'][0][0]
     where = 'imdb_crop'
     img_loc = []
     corr_ages = []
-    total =  len(place)
 
-    for i in range(total):
+    for i in range(460723):
         # print(place[0][0][i])
         bYear = int(place[0][0][i] / 365)  # birth year
         # print(bYear)
@@ -62,22 +61,28 @@ def train(args):
         from models.Face_recognition import FR_model
         FR = FR_model()
         Model = model()
-
+        Model.compile(loss='mean_absolute_error', optimizer='adam')
         # training loop
-        length = len(place)
+        length = len(df)
+        print("length are {}".format(length))
+        assert length > 0
         batch_size = args.batch_size
         n_batches = length // batch_size
         epochs = args.epochs
         iters = (int)(epochs * n_batches)
+        assert iters > 0
+        print("iters are {}".format(iters))
         for i in range(iters):
             X, Y = get_images(batch_size, df['Image Location'], df['Age'], (args.img_size, args.img_size))
             X = np.array(X)
             Y = np.array(Y)
-            X = FR_model(X)
+            X = FR(X)
+
             assert X.shape == (batch_size, 128), 'expected shape {} O/p shape {}'.format((batch_size, 128), X.shape)
             history = Model.fit(X, Y, batch_size, 1, verbose=0)
-            if i % args.log_step == 0:
-                print("Epoch No {} Loss {} Batch size {}   ".format(i+1, history.history['loss'], args.batch_size))
+            if (i + 1) % args.log_step == 0:
+                print("Iters [{}/{}] Loss {} Batch size {}   ".format(i + 1, iters, history.history['loss'],
+                                                                      args.batch_size))
 
         Model.save(args.save_path)
 
@@ -86,10 +91,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Model configuration.
-    parser.add_argument('pre_trained', type = str, default = 'facenet', help='pre-trained model to be usedx')
-    parser.add_argument('img_size', type=int, default=160, help='size of image to be fed to the model')
-    parser.add_argument('batch_size', type=int, default=50, help='batch s9ize to be used')
-    parser.add_argument('epochs', type=float, default=2, help='number of epochs to be used')
-    parser.add_argument('log_step', type=int, default=50, help='number of steps to be taken before logging')
-    parser.add_argument('args.save_path', type=str, default='Model_checkpoint', help ='path of dir where model is to be saved')
+    parser.add_argument('--pre_trained', type=str, default='facenet', help='pre-trained model to be usedx')
+    parser.add_argument('--img_size', type=int, default=160, help='size of image to be fed to the model')
+    parser.add_argument('--batch_size', type=int, default=50, help='batch s9ize to be used')
+    parser.add_argument('--epochs', type=float, default=2, help='number of epochs to be used')
+    parser.add_argument('--log_step', type=int, default=50, help='number of steps to be taken before logging')
+    parser.add_argument('--save_path', type=str, default='Model_checkpoint',
+                        help='path of dir where model is to be saved')
     args = parser.parse_args()
+    train(args)
